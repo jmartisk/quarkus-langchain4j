@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import io.quarkus.runtime.annotations.RegisterForReflection;
-
-@RegisterForReflection
 public class AddEmbeddingsRequest {
 
     private final List<String> ids;
