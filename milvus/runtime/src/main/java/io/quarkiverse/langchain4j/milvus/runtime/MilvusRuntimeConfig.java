@@ -16,7 +16,12 @@ public interface MilvusRuntimeConfig {
     /**
      * The URL of the Milvus server.
      */
-    String baseUrl();
+    //    String host();
+
+    /**
+     * The port of the Milvus server.
+     */
+    //    Integer port();
 
     /**
      * The authentication token for the Milvus server.
@@ -61,13 +66,19 @@ public interface MilvusRuntimeConfig {
      * TODO
      */
     @WithDefault("id")
-    String primaryField();
+    String idField();
 
     /**
      * Name of the field to store the vector in.
      */
     @WithDefault("vector")
     String vectorField();
+
+    /**
+     * Name of the field to store the embedded text in.
+     */
+    @WithDefault("text")
+    String textField();
 
     /**
      * Description of the collection.

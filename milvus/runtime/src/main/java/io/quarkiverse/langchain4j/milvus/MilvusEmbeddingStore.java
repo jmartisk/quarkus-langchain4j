@@ -4,117 +4,142 @@ import static dev.langchain4j.internal.Utils.randomUUID;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.toList;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import jakarta.ws.rs.core.MultivaluedHashMap;
-import jakarta.ws.rs.core.MultivaluedMap;
-
-import org.eclipse.microprofile.rest.client.ext.ClientHeadersFactory;
 
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import io.quarkiverse.langchain4j.milvus.runtime.CreateCollectionRequest;
+import io.milvus.grpc.CollectionSchema;
+import io.milvus.grpc.CreateCollectionRequest;
+import io.milvus.grpc.CreateIndexRequest;
+import io.milvus.grpc.DataType;
+import io.milvus.grpc.DescribeCollectionRequest;
+import io.milvus.grpc.DescribeCollectionResponse;
+import io.milvus.grpc.FieldData;
+import io.milvus.grpc.FieldSchema;
+import io.milvus.grpc.FloatArray;
+import io.milvus.grpc.HasCollectionRequest;
+import io.milvus.grpc.InsertRequest;
+import io.milvus.grpc.KeyValuePair;
+import io.milvus.grpc.LoadCollectionRequest;
+import io.milvus.grpc.MilvusService;
+import io.milvus.grpc.MutationResult;
+import io.milvus.grpc.ScalarField;
+import io.milvus.grpc.SearchRequest;
+import io.milvus.grpc.SearchResults;
+import io.milvus.grpc.Status;
+import io.milvus.grpc.StringArray;
+import io.milvus.grpc.VectorField;
 import io.quarkiverse.langchain4j.milvus.runtime.MetricType;
 import io.quarkiverse.langchain4j.milvus.runtime.MilvusClientException;
-import io.quarkiverse.langchain4j.milvus.runtime.MilvusCollectionOperationsApi;
-import io.quarkiverse.langchain4j.milvus.runtime.MilvusVectorOperationsApi;
-import io.quarkiverse.langchain4j.milvus.runtime.SearchRequest;
-import io.quarkiverse.langchain4j.milvus.runtime.SearchResponse;
-import io.quarkiverse.langchain4j.milvus.runtime.UpsertRequest;
-import io.quarkiverse.langchain4j.milvus.runtime.UpsertResponse;
 import io.quarkus.arc.impl.LazyValue;
 import io.quarkus.logging.Log;
-import io.quarkus.rest.client.reactive.QuarkusRestClientBuilder;
 
 public class MilvusEmbeddingStore implements EmbeddingStore<TextSegment> {
 
-    private final MilvusCollectionOperationsApi collectionOperations;
-
-    private final MilvusVectorOperationsApi vectorOperations;
     private final LazyValue<Object> collectionExists;
     private final String dbName;
     private final String collectionName;
     private final MetricType metricType;
-    private final String primaryField;
-    private final String vectorField;
+    private final String idFieldName;
+    private final String vectorFieldName;
+    private final String textFieldName;
+
+    // TODO make configurable
+    private final Duration timeout = Duration.ofSeconds(10);
+
+    private MilvusService client;
 
     public MilvusEmbeddingStore(boolean createCollection,
-            String baseUrl,
+            MilvusService client,
             String authToken,
             Duration timeout,
             String dbName,
             String collectionName,
             Integer dimension,
             MetricType metricType,
-            String primaryField,
-            String vectorField) {
+            String idField,
+            String vectorField,
+            String textField) {
+        this.client = client;
         this.dbName = dbName;
         this.collectionName = collectionName;
         this.metricType = metricType;
-        this.primaryField = primaryField;
-        this.vectorField = vectorField;
-        try {
-            ClientHeadersFactory clientHeadersFactory = new ClientHeadersFactory() {
-                @Override
-                public MultivaluedMap<String, String> update(MultivaluedMap<String, String> incoming,
-                        MultivaluedMap<String, String> outgoing) {
-                    MultivaluedMap<String, String> headers = new MultivaluedHashMap<>();
-                    if (authToken != null) {
-                        headers.put("Authorization", singletonList("Bearer " + authToken));
-                    }
-                    return headers;
-                }
-            };
-            collectionOperations = QuarkusRestClientBuilder.newBuilder()
-                    .baseUri(new URI(baseUrl))
-                    .followRedirects(true)
-                    .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
-                    .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
-                    .clientHeadersFactory(clientHeadersFactory)
-                    .build(MilvusCollectionOperationsApi.class);
-            vectorOperations = QuarkusRestClientBuilder.newBuilder()
-                    .baseUri(new URI(baseUrl))
-                    .followRedirects(true)
-                    .connectTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
-                    .readTimeout(timeout.toSeconds(), TimeUnit.SECONDS)
-                    .clientHeadersFactory(clientHeadersFactory)
-                    .build(MilvusVectorOperationsApi.class);
-        } catch (URISyntaxException e) {
-            throw new RuntimeException(e);
-        }
+        this.idFieldName = idField;
+        this.vectorFieldName = vectorField;
+        this.textFieldName = textField;
+
         this.collectionExists = new LazyValue<>(new Supplier<Object>() {
             @Override
             public Object get() {
-                if (collectionOperations.listCollections().getData().contains(collectionName)) {
-                    Log.info("Milvus collection " + collectionName + " already exists");
+                HasCollectionRequest request = HasCollectionRequest.newBuilder().setCollectionName(collectionName).build();
+                if (client.hasCollection(request).await().atMost(timeout).getValue()) {
+                    Log.info("Collection " + collectionName + " already exists");
                 } else {
-                    if (!createCollection) {
-                        throw new IllegalArgumentException(
-                                "quarkus.langchain4j.milvus.create-collection must be set to true when creating a new collection");
-                    }
-                    if (dimension == null) {
-                        throw new IllegalArgumentException(
-                                "quarkus.langchain4j.milvus.dimension must be specified when creating a new collecton");
-                    }
-                    collectionOperations.createCollecton(
-                            new CreateCollectionRequest(dbName, collectionName, dimension, metricType, primaryField,
-                                    vectorField));
-                    Log.info("Created Milvus collection " + collectionName + " with dimension = " + dimension);
+                    Log.info("Collection " + collectionName + " does not exist, creating");
+                    createCollection(collectionName, dimension, dbName, client, timeout);
+                    createIndex(dbName, collectionName, client, timeout);
                 }
                 return new Object();
             }
         });
+    }
+
+    private void createIndex(String dbName, String collectionName, MilvusService client, Duration timeout) {
+        CreateIndexRequest createIndex = CreateIndexRequest.newBuilder()
+                .setDbName(dbName)
+                .setCollectionName(collectionName)
+                // TODO: how to specify metricType?
+                .setFieldName(vectorFieldName)
+                .build();
+        client.createIndex(createIndex).await().atMost(timeout);
+    }
+
+    private void createCollection(String collectionName, Integer dimension, String dbName, MilvusService client,
+            Duration timeout) {
+        if (dimension == null) {
+            throw new IllegalArgumentException(
+                    "quarkus.langchain4j.milvus.dimension must be specified when creating a new collection");
+        }
+        FieldSchema idField = FieldSchema.newBuilder()
+                .setName(idFieldName)
+                .setAutoID(false)
+                .setIsPrimaryKey(true)
+                .setDataType(DataType.VarChar)
+                .addTypeParams(KeyValuePair.newBuilder().setKey("max_length").setValue("256").build())
+                .build();
+        FieldSchema textField = FieldSchema.newBuilder()
+                .setName(textFieldName)
+                .setIsPrimaryKey(false)
+                .setDataType(DataType.VarChar)
+                // TODO: make the max_length configurable???
+                .addTypeParams(KeyValuePair.newBuilder().setKey("max_length").setValue("4096").build())
+                .build();
+        FieldSchema vectorField = FieldSchema.newBuilder()
+                .setName(vectorFieldName)
+                .setIsPrimaryKey(false)
+                .setDataType(DataType.FloatVector)
+                .addTypeParams(KeyValuePair.newBuilder().setKey("dim").setValue(String.valueOf(dimension)).build())
+                .build();
+        CreateCollectionRequest create = CreateCollectionRequest.newBuilder()
+                .setDbName(dbName)
+                .setCollectionName(collectionName)
+                .setSchema(CollectionSchema.newBuilder()
+                        .setName(collectionName)
+                        .addFields(idField)
+                        .addFields(textField)
+                        .addFields(vectorField)
+                        .build().toByteString())
+                .build();
+        Status status = client.createCollection(create).await().atMost(timeout);
+        if (status.getCode() != 0) {
+            throw new MilvusClientException(status.getReason());
+        }
     }
 
     @Override
@@ -157,10 +182,30 @@ public class MilvusEmbeddingStore implements EmbeddingStore<TextSegment> {
     @Override
     public List<EmbeddingMatch<TextSegment>> findRelevant(Embedding embedding, int maxResults, double minScore) {
         collectionExists.get();
+        System.out.println("FINDING");
+        DescribeCollectionRequest describeRequest = DescribeCollectionRequest.newBuilder()
+                .setDbName(dbName)
+                .setCollectionName(collectionName)
+                .build();
+        client.loadCollection(LoadCollectionRequest.newBuilder()
+                .setDbName(dbName).setCollectionName(collectionName).build()).await().atMost(timeout);
+        DescribeCollectionResponse description = client.describeCollection(describeRequest).await().atMost(timeout);
+        System.out.println("Described: " + description);
+        SearchRequest request = SearchRequest.newBuilder()
+                .setDbName(dbName)
+                .setCollectionName(collectionName)
+                .addOutputFields(idFieldName)
+                .addOutputFields(textFieldName)
+                .addOutputFields(vectorFieldName)
+                .setNq(1)
+                // TODO HOW TO ADD THE REFERENCE VECTOR HERE???
+                .build();
+        System.out.println("REQUEST: " + request);
+        SearchResults searchResults = client.search(request).await().atMost(timeout);
+        System.out.println("RESPONSE:");
+        System.out.println("STATUSL " + searchResults.getStatus());
+        System.out.println(searchResults.getResults());
         // TODO
-        String[] outputFields = { vectorField, primaryField };
-        SearchRequest request = new SearchRequest(collectionName, embedding.vector(), maxResults, outputFields);
-        SearchResponse response = vectorOperations.search(request);
         return null;
 
         //        QueryRequest request = new QueryRequest(namespace, (long) maxResults, true, true, embedding.vector());
@@ -189,22 +234,46 @@ public class MilvusEmbeddingStore implements EmbeddingStore<TextSegment> {
 
     private void addAllInternal(List<String> ids, List<Embedding> embeddings, List<TextSegment> textSegments) {
         collectionExists.get();
-        Log.debug("Adding embeddings: " + embeddings);
         int count = ids.size();
-        List<Map<String, Object>> data = new ArrayList<>();
-        for (int i = 0; i < count; i++) {
-            Map<String, Object> vector = new HashMap<>();
-            vector.put(vectorField, embeddings.get(i).vector());
-            vector.put(primaryField, ids.get(i));
-            Map<String, String> metadataMap = textSegments.get(i).metadata().asMap();
-            vector.putAll(metadataMap);
-            data.add(vector);
-        }
-        UpsertRequest request = new UpsertRequest(collectionName, data);
-        UpsertResponse response = vectorOperations.upsert(request);
-        if (response.getCode() != 200) {
-            throw new MilvusClientException("Failed to add embeddings: " + response.getMessage());
-        }
-        Log.debug("Added embeddings: " + response.getData().getUpsertCount());
+
+        StringArray idArray = StringArray.newBuilder().addAllData(ids).build();
+        FieldData idData = FieldData.newBuilder()
+                .setFieldName(idFieldName)
+                .setScalars(ScalarField.newBuilder().setStringData(idArray).build())
+                .build();
+
+        StringArray textArray = StringArray.newBuilder()
+                .addAllData(textSegments.stream().map(s -> s.text()).collect(Collectors.toList())).build();
+        FieldData textData = FieldData.newBuilder()
+                .setFieldName(textFieldName)
+                .setScalars(ScalarField.newBuilder().setStringData(textArray).build())
+                .build();
+
+        FloatArray vectorArray = FloatArray.newBuilder()
+                .addAllData(embeddings.get(0).vectorAsList()) // !!!!!
+                .build();
+        FieldData vectorData = FieldData.newBuilder()
+                .setFieldName(vectorFieldName)
+                .setVectors(VectorField.newBuilder()
+                        .setDim(embeddings.get(0).dimensions())
+                        .setFloatVector(vectorArray).build())
+                .build();
+
+        InsertRequest insertRequest = InsertRequest.newBuilder()
+                .setDbName(dbName)
+                .setCollectionName(collectionName)
+                .addFieldsData(idData)
+                .addFieldsData(textData)
+                .addFieldsData(vectorData)
+                .setNumRows(count)
+                .build();
+        System.out.println("-----------------------------");
+        System.out.println("INSERT REQUEST:");
+        System.out.println(insertRequest);
+        MutationResult mutationResult = client.insert(insertRequest).await().atMost(timeout);
+        System.out.println("-----------------------------");
+        System.out.println("INSERT RESULT:");
+        System.out.println(mutationResult);
     }
+
 }

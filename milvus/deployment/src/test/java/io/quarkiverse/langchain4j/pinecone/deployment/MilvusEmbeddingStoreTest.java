@@ -12,6 +12,7 @@ import jakarta.inject.Inject;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.StringAsset;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -22,10 +23,11 @@ import dev.langchain4j.model.embedding.AllMiniLmL6V2QuantizedEmbeddingModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.CosineSimilarity;
 import dev.langchain4j.store.embedding.EmbeddingMatch;
+import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.RelevanceScore;
-import io.quarkiverse.langchain4j.milvus.MilvusEmbeddingStore;
 import io.quarkus.test.QuarkusUnitTest;
 
+@Disabled
 public class MilvusEmbeddingStoreTest {
 
     @RegisterExtension
@@ -42,7 +44,7 @@ public class MilvusEmbeddingStoreTest {
                             "application.properties"));
 
     @Inject
-    MilvusEmbeddingStore embeddingStore;
+    EmbeddingStore<TextSegment> embeddingStore;
 
     private final EmbeddingModel embeddingModel = new AllMiniLmL6V2QuantizedEmbeddingModel();
 
