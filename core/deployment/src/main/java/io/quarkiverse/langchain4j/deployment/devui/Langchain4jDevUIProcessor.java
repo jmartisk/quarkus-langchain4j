@@ -9,8 +9,10 @@ import io.quarkiverse.langchain4j.deployment.EmbeddingModelBuildItem;
 import io.quarkiverse.langchain4j.deployment.EmbeddingStoreBuildItem;
 import io.quarkiverse.langchain4j.deployment.ToolsMetadataBuildItem;
 import io.quarkiverse.langchain4j.deployment.items.ChatModelProviderCandidateBuildItem;
+import io.quarkiverse.langchain4j.deployment.items.ImageModelProviderCandidateBuildItem;
 import io.quarkiverse.langchain4j.runtime.devui.ChatJsonRPCService;
 import io.quarkiverse.langchain4j.runtime.devui.EmbeddingStoreJsonRPCService;
+import io.quarkiverse.langchain4j.runtime.devui.ImagesJsonRPCService;
 import io.quarkiverse.langchain4j.runtime.tool.ToolMethodCreateInfo;
 import io.quarkus.deployment.IsDevelopment;
 import io.quarkus.deployment.annotations.BuildProducer;
@@ -26,7 +28,8 @@ public class Langchain4jDevUIProcessor {
             ToolsMetadataBuildItem toolsMetadataBuildItem,
             List<EmbeddingModelBuildItem> embeddingModelBuildItem,
             List<EmbeddingStoreBuildItem> embeddingStoreBuildItem,
-            List<ChatModelProviderCandidateBuildItem> chatModelCandidates) {
+            List<ChatModelProviderCandidateBuildItem> chatModelCandidates,
+            List<ImageModelProviderCandidateBuildItem> imageModelCandidates) {
         CardPageBuildItem card = new CardPageBuildItem();
         addAiServicesPage(card, aiServices);
         if (toolsMetadataBuildItem != null) {
@@ -39,6 +42,9 @@ public class Langchain4jDevUIProcessor {
         }
         if (!chatModelCandidates.isEmpty()) {
             addChatPage(card);
+        }
+        if (!imageModelCandidates.isEmpty()) {
+            addImagesPage(card);
         }
         return card;
     }
@@ -86,16 +92,26 @@ public class Langchain4jDevUIProcessor {
                 .icon("font-awesome-solid:comments"));
     }
 
+    private void addImagesPage(CardPageBuildItem card) {
+        card.addPage(Page.webComponentPageBuilder().title("Images")
+                .componentLink("qwc-images.js")
+                .icon("font-awesome-solid:palette"));
+    }
+
     @BuildStep(onlyIf = IsDevelopment.class)
     void jsonRpcProviders(BuildProducer<JsonRPCProvidersBuildItem> producers,
             List<EmbeddingModelBuildItem> embeddingModelBuildItem,
             List<EmbeddingStoreBuildItem> embeddingStoreBuildItem,
-            List<ChatModelProviderCandidateBuildItem> chatModelCandidates) {
+            List<ChatModelProviderCandidateBuildItem> chatModelCandidates,
+            List<ImageModelProviderCandidateBuildItem> imageModelCandidates) {
         if (embeddingModelBuildItem.size() == 1 && embeddingStoreBuildItem.size() == 1) {
             producers.produce(new JsonRPCProvidersBuildItem(EmbeddingStoreJsonRPCService.class));
         }
         if (!chatModelCandidates.isEmpty()) {
             producers.produce(new JsonRPCProvidersBuildItem(ChatJsonRPCService.class));
+        }
+        if (!imageModelCandidates.isEmpty()) {
+            producers.produce(new JsonRPCProvidersBuildItem(ImagesJsonRPCService.class));
         }
     }
 
