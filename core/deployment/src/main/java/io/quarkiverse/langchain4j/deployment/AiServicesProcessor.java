@@ -3,6 +3,7 @@ package io.quarkiverse.langchain4j.deployment;
 import static dev.langchain4j.exception.IllegalConfigurationException.illegalConfiguration;
 import static dev.langchain4j.service.ServiceOutputParser.outputFormatInstructions;
 import static io.quarkiverse.langchain4j.deployment.ExceptionUtil.illegalConfigurationForMethod;
+import static io.quarkiverse.langchain4j.deployment.Langchain4jDotNames.NO_RETRIEVAL_AUGMENTOR;
 import static io.quarkiverse.langchain4j.deployment.Langchain4jDotNames.NO_RETRIEVER;
 
 import java.io.IOException;
@@ -230,6 +231,29 @@ public class AiServicesProcessor {
                 }
             }
 
+            DotName retrievalAugmentorSupplierClassDotName = null;
+            AnnotationValue retrievalAugmentorSupplierValue = instance.value("retrievalAugmentor");
+            if (retrievalAugmentorSupplierValue != null) {
+                retrievalAugmentorSupplierClassDotName = retrievalAugmentorSupplierValue.asClass().name();
+                if (NO_RETRIEVAL_AUGMENTOR.equals(retrieverClassDotName)) {
+                    retrievalAugmentorSupplierClassDotName = null;
+                } else {
+                    BuiltinScope declaredScope = BuiltinScope
+                            .from(index.getClassByName(retrievalAugmentorSupplierClassDotName));
+                    if (declaredScope == null) {
+                        throw new IllegalConfigurationException(
+                                "Unable to determine the CDI scope of " + retrievalAugmentorSupplierClassDotName
+                                        + ". Is it a CDI bean?");
+                    }
+                }
+            }
+
+            if (retrieverClassDotName != null && retrievalAugmentorSupplierClassDotName != null) {
+                throw new IllegalConfigurationException("Both 'retriever' and 'retrievalAugmentor' are set for "
+                        + declarativeAiServiceClassInfo.name().toString()
+                        + ". Only one of them can be set.");
+            }
+
             DotName auditServiceSupplierClassName = Langchain4jDotNames.BEAN_IF_EXISTS_AUDIT_SERVICE_SUPPLIER;
             AnnotationValue auditServiceSupplierValue = instance.value("auditServiceSupplier");
             if (auditServiceSupplierValue != null) {
@@ -260,6 +284,7 @@ public class AiServicesProcessor {
                             toolDotNames,
                             chatMemoryProviderSupplierClassDotName,
                             retrieverClassDotName,
+                            retrievalAugmentorSupplierClassDotName,
                             auditServiceSupplierClassName,
                             moderationModelSupplierClassName,
                             cdiScope,
@@ -324,6 +349,10 @@ public class AiServicesProcessor {
                     ? bi.getRetrieverClassDotName().toString()
                     : null;
 
+            String retrievalAugmentorSupplierClassName = bi.getRetrievalAugmentorSupplierClassDotName() != null
+                    ? bi.getRetrievalAugmentorSupplierClassDotName().toString()
+                    : null;
+
             String auditServiceClassSupplierName = bi.getAuditServiceClassSupplierDotName() != null
                     ? bi.getAuditServiceClassSupplierDotName().toString()
                     : null;
@@ -358,6 +387,7 @@ public class AiServicesProcessor {
                     .createWith(recorder.createDeclarativeAiService(
                             new DeclarativeAiServiceCreateInfo(serviceClassName, chatLanguageModelSupplierClassName,
                                     toolClassNames, chatMemoryProviderSupplierClassName, retrieverClassName,
+                                    retrievalAugmentorSupplierClassName,
                                     auditServiceClassSupplierName, moderationModelSupplierClassName, chatModelName,
                                     injectStreamingChatModelBean)))
                     .setRuntimeInit()
@@ -404,6 +434,10 @@ public class AiServicesProcessor {
                 needsRetrieverBean = true;
             }
 
+            if (retrievalAugmentorSupplierClassName != null) {
+                configurator.addInjectionPoint(ClassType.create(retrievalAugmentorSupplierClassName));
+                unremoveableProducer.produce(UnremovableBeanBuildItem.beanClassNames(retrievalAugmentorSupplierClassName));
+            }
             if (Langchain4jDotNames.BEAN_IF_EXISTS_AUDIT_SERVICE_SUPPLIER.toString().equals(auditServiceClassSupplierName)) {
                 configurator.addInjectionPoint(ParameterizedType.create(CDI_INSTANCE,
                         new Type[] { ClassType.create(Langchain4jDotNames.AUDIT_SERVICE) }, null));

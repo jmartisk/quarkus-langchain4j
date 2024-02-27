@@ -14,6 +14,7 @@ import dev.langchain4j.memory.chat.ChatMemoryProvider;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.moderation.ModerationModel;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.retriever.Retriever;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
@@ -88,10 +89,20 @@ public @interface RegisterAiService {
     Class<? extends Supplier<ChatMemoryProvider>> chatMemoryProviderSupplier() default BeanChatMemoryProviderSupplier.class;
 
     /**
-     * Configures the way to obtain the {@link Retriever} to use (when using RAG). All tools are expected to be CDI beans
-     * By default, no supplier is used.
+     * Configures the way to obtain the {@link Retriever} to use (when using RAG).
+     * By default, no retriever is used.
+     *
+     * @deprecated Use retrievalAugmentor instead
      */
+    @Deprecated(forRemoval = true)
     Class<? extends Retriever<TextSegment>> retriever() default NoRetriever.class;
+
+    /**
+     * Configures the way to obtain the {@link RetrievalAugmentor} to use (when using RAG).
+     * The Supplier is expected to be a CDI bean.
+     * By default, no retrieval augmentor is used.
+     */
+    Class<? extends Supplier<RetrievalAugmentor>> retrievalAugmentor() default NoRetrievalAugmentor.class;
 
     /**
      * Configures the way to obtain the {@link AuditService} to use.
@@ -146,6 +157,17 @@ public @interface RegisterAiService {
 
         @Override
         public List<TextSegment> findRelevant(String text) {
+            throw new UnsupportedOperationException("should never be called");
+        }
+    }
+
+    /**
+     * Marker class to indicate that no retrieval augmentor should be used
+     */
+    final class NoRetrievalAugmentor implements Supplier<RetrievalAugmentor> {
+
+        @Override
+        public RetrievalAugmentor get() {
             throw new UnsupportedOperationException("should never be called");
         }
     }
