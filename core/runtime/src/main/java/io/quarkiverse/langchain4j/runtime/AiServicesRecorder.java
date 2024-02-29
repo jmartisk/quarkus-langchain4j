@@ -156,10 +156,19 @@ public class AiServicesRecorder {
                                 quarkusAiServices.retrievalAugmentor(instance.get());
                             }
                         } else {
-                            Supplier<RetrievalAugmentor> instance = (Supplier<RetrievalAugmentor>) creationalContext
-                                    .getInjectedReference(Thread.currentThread().getContextClassLoader()
-                                            .loadClass(info.getRetrievalAugmentorSupplierClassName()));
-                            quarkusAiServices.retrievalAugmentor(instance.get());
+                            try {
+                                Supplier<RetrievalAugmentor> instance = (Supplier<RetrievalAugmentor>) creationalContext
+                                        .getInjectedReference(Thread.currentThread().getContextClassLoader()
+                                                .loadClass(info.getRetrievalAugmentorSupplierClassName()));
+                                quarkusAiServices.retrievalAugmentor(instance.get());
+                            } catch (IllegalArgumentException e) {
+                                // the provided Supplier is not a CDI bean, build it manually
+                                Supplier<? extends RetrievalAugmentor> supplier = (Supplier<? extends RetrievalAugmentor>) Thread
+                                        .currentThread().getContextClassLoader()
+                                        .loadClass(info.getRetrievalAugmentorSupplierClassName())
+                                        .getConstructor().newInstance();
+                                quarkusAiServices.retrievalAugmentor(supplier.get());
+                            }
                         }
                     }
 
