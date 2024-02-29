@@ -100,9 +100,10 @@ public @interface RegisterAiService {
     /**
      * Configures the way to obtain the {@link RetrievalAugmentor} to use (when using RAG).
      * The Supplier is expected to be a CDI bean.
-     * By default, no retrieval augmentor is used.
+     * If unspecified, Quarkus will attempt to locate a CDI bean that implements {@link RetrievalAugmentor}
+     * and use it if one exists.
      */
-    Class<? extends Supplier<RetrievalAugmentor>> retrievalAugmentor() default NoRetrievalAugmentor.class;
+    Class<? extends Supplier<RetrievalAugmentor>> retrievalAugmentor() default BeanIfExistsRetrievalAugmentorSupplier.class;
 
     /**
      * Configures the way to obtain the {@link AuditService} to use.
@@ -162,9 +163,10 @@ public @interface RegisterAiService {
     }
 
     /**
-     * Marker class to indicate that no retrieval augmentor should be used
+     * Marker that is used to tell Quarkus to use the {@link RetrievalAugmentor} that the user has configured as a CDI bean.
+     * If no such bean exists, then no retrieval augmentor will be used.
      */
-    final class NoRetrievalAugmentor implements Supplier<RetrievalAugmentor> {
+    final class BeanIfExistsRetrievalAugmentorSupplier implements Supplier<RetrievalAugmentor> {
 
         @Override
         public RetrievalAugmentor get() {

@@ -3,7 +3,7 @@ package io.quarkiverse.langchain4j.deployment;
 import static dev.langchain4j.exception.IllegalConfigurationException.illegalConfiguration;
 import static dev.langchain4j.service.ServiceOutputParser.outputFormatInstructions;
 import static io.quarkiverse.langchain4j.deployment.ExceptionUtil.illegalConfigurationForMethod;
-import static io.quarkiverse.langchain4j.deployment.Langchain4jDotNames.NO_RETRIEVAL_AUGMENTOR;
+import static io.quarkiverse.langchain4j.deployment.Langchain4jDotNames.BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER;
 import static io.quarkiverse.langchain4j.deployment.Langchain4jDotNames.NO_RETRIEVER;
 
 import java.io.IOException;
@@ -231,24 +231,33 @@ public class AiServicesProcessor {
                 }
             }
 
-            DotName retrievalAugmentorSupplierClassDotName = null;
+            DotName retrievalAugmentorSupplierClassName = BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER;
             AnnotationValue retrievalAugmentorSupplierValue = instance.value("retrievalAugmentor");
-            if (retrievalAugmentorSupplierValue != null) {
-                retrievalAugmentorSupplierClassDotName = retrievalAugmentorSupplierValue.asClass().name();
-                if (NO_RETRIEVAL_AUGMENTOR.equals(retrieverClassDotName)) {
-                    retrievalAugmentorSupplierClassDotName = null;
-                } else {
-                    BuiltinScope declaredScope = BuiltinScope
-                            .from(index.getClassByName(retrievalAugmentorSupplierClassDotName));
-                    if (declaredScope == null) {
-                        throw new IllegalConfigurationException(
-                                "Unable to determine the CDI scope of " + retrievalAugmentorSupplierClassDotName
-                                        + ". Is it a CDI bean?");
-                    }
+            if (retrievalAugmentorSupplierValue != null && !BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER
+                    .equals(retrievalAugmentorSupplierValue.asClass().name())) {
+                retrievalAugmentorSupplierClassName = retrievalAugmentorSupplierValue.asClass().name();
+                validateSupplierAndRegisterForReflection(retrievalAugmentorSupplierClassName, index, reflectiveClassProducer);
+                BuiltinScope declaredScope = BuiltinScope
+                        .from(index.getClassByName(retrievalAugmentorSupplierClassName));
+                if (declaredScope == null) {
+                    throw new IllegalConfigurationException(
+                            "Unable to determine the CDI scope of " + retrievalAugmentorSupplierClassName
+                                    + ". Is it a CDI bean?");
                 }
+                //                if (BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER.equals(retrieverClassDotName)) {
+                //                    retrievalAugmentorSupplierClassName = null;
+                //                } else {
+                //                    BuiltinScope declaredScope = BuiltinScope
+                //                            .from(index.getClassByName(retrievalAugmentorSupplierClassName));
+                //                    if (declaredScope == null) {
+                //                        throw new IllegalConfigurationException(
+                //                                "Unable to determine the CDI scope of " + retrievalAugmentorSupplierClassName
+                //                                        + ". Is it a CDI bean?");
+                //                    }
+                //                }
             }
 
-            if (retrieverClassDotName != null && retrievalAugmentorSupplierClassDotName != null) {
+            if (retrieverClassDotName != null && retrievalAugmentorSupplierClassName != null) {
                 throw new IllegalConfigurationException("Both 'retriever' and 'retrievalAugmentor' are set for "
                         + declarativeAiServiceClassInfo.name().toString()
                         + ". Only one of them can be set.");
@@ -284,7 +293,7 @@ public class AiServicesProcessor {
                             toolDotNames,
                             chatMemoryProviderSupplierClassDotName,
                             retrieverClassDotName,
-                            retrievalAugmentorSupplierClassDotName,
+                            retrievalAugmentorSupplierClassName,
                             auditServiceSupplierClassName,
                             moderationModelSupplierClassName,
                             cdiScope,
@@ -327,6 +336,7 @@ public class AiServicesProcessor {
         boolean needsStreamingChatModelBean = false;
         boolean needsChatMemoryProviderBean = false;
         boolean needsRetrieverBean = false;
+        boolean needsRetrievalAugmentorBean = false;
         boolean needsAuditServiceBean = false;
         boolean needsModerationModelBean = false;
         Set<DotName> allToolNames = new HashSet<>();
@@ -434,10 +444,20 @@ public class AiServicesProcessor {
                 needsRetrieverBean = true;
             }
 
-            if (retrievalAugmentorSupplierClassName != null) {
+            //            if (retrievalAugmentorSupplierClassName != null) {
+            //                configurator.addInjectionPoint(ClassType.create(retrievalAugmentorSupplierClassName));
+            //                unremoveableProducer.produce(UnremovableBeanBuildItem.beanClassNames(retrievalAugmentorSupplierClassName));
+            //            }
+            if (Langchain4jDotNames.BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER.toString()
+                    .equals(retrievalAugmentorSupplierClassName)) {
+                configurator.addInjectionPoint(ParameterizedType.create(CDI_INSTANCE,
+                        new Type[] { ClassType.create(Langchain4jDotNames.RETRIEVAL_AUGMENTOR) }, null));
+                needsRetrievalAugmentorBean = true;
+            } else {
                 configurator.addInjectionPoint(ClassType.create(retrievalAugmentorSupplierClassName));
                 unremoveableProducer.produce(UnremovableBeanBuildItem.beanClassNames(retrievalAugmentorSupplierClassName));
             }
+
             if (Langchain4jDotNames.BEAN_IF_EXISTS_AUDIT_SERVICE_SUPPLIER.toString().equals(auditServiceClassSupplierName)) {
                 configurator.addInjectionPoint(ParameterizedType.create(CDI_INSTANCE,
                         new Type[] { ClassType.create(Langchain4jDotNames.AUDIT_SERVICE) }, null));
@@ -463,6 +483,9 @@ public class AiServicesProcessor {
         }
         if (needsRetrieverBean) {
             unremoveableProducer.produce(UnremovableBeanBuildItem.beanTypes(Langchain4jDotNames.RETRIEVER));
+        }
+        if (needsRetrievalAugmentorBean) {
+            unremoveableProducer.produce(UnremovableBeanBuildItem.beanTypes(Langchain4jDotNames.RETRIEVAL_AUGMENTOR));
         }
         if (needsAuditServiceBean) {
             unremoveableProducer.produce(UnremovableBeanBuildItem.beanTypes(Langchain4jDotNames.AUDIT_SERVICE));

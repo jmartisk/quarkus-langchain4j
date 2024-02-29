@@ -38,6 +38,9 @@ public class AiServicesRecorder {
     private static final TypeLiteral<Instance<AuditService>> AUDIT_SERVICE_TYPE_LITERAL = new TypeLiteral<>() {
     };
 
+    private static final TypeLiteral<Instance<RetrievalAugmentor>> RETRIEVAL_AUGMENTOR_TYPE_LITERAL = new TypeLiteral<>() {
+    };
+
     // the key is the interface's class name
     private static final Map<String, AiServiceClassCreateInfo> metadata = new HashMap<>();
 
@@ -145,10 +148,19 @@ public class AiServicesRecorder {
                     }
 
                     if (info.getRetrievalAugmentorSupplierClassName() != null) {
-                        Supplier<RetrievalAugmentor> instance = (Supplier<RetrievalAugmentor>) creationalContext
-                                .getInjectedReference(Thread.currentThread().getContextClassLoader()
-                                        .loadClass(info.getRetrievalAugmentorSupplierClassName()));
-                        quarkusAiServices.retrievalAugmentor(instance.get());
+                        if (RegisterAiService.BeanIfExistsRetrievalAugmentorSupplier.class.getName()
+                                .equals(info.getRetrievalAugmentorSupplierClassName())) {
+                            Instance<RetrievalAugmentor> instance = creationalContext
+                                    .getInjectedReference(RETRIEVAL_AUGMENTOR_TYPE_LITERAL);
+                            if (instance.isResolvable()) {
+                                quarkusAiServices.retrievalAugmentor(instance.get());
+                            }
+                        } else {
+                            Supplier<RetrievalAugmentor> instance = (Supplier<RetrievalAugmentor>) creationalContext
+                                    .getInjectedReference(Thread.currentThread().getContextClassLoader()
+                                            .loadClass(info.getRetrievalAugmentorSupplierClassName()));
+                            quarkusAiServices.retrievalAugmentor(instance.get());
+                        }
                     }
 
                     if (info.getAuditServiceClassSupplierName() != null) {

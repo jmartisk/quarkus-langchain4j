@@ -59,8 +59,8 @@ public class Langchain4jDotNames {
             RegisterAiService.NoRetriever.class);
 
     static final DotName RETRIEVAL_AUGMENTOR = DotName.createSimple(RetrievalAugmentor.class);
-    static final DotName NO_RETRIEVAL_AUGMENTOR = DotName.createSimple(
-            RegisterAiService.NoRetrievalAugmentor.class);
+    static final DotName BEAN_IF_EXISTS_RETRIEVAL_AUGMENTOR_SUPPLIER = DotName.createSimple(
+            RegisterAiService.BeanIfExistsRetrievalAugmentorSupplier.class);
 
     static final DotName AUDIT_SERVICE = DotName.createSimple(AuditService.class);
 
