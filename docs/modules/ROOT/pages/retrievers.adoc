@@ -73,6 +73,12 @@ example on a full-text search engine), using a scoring model to further
 filter the retrieved results, etc. For more information about advanced RAG
 strategies, refer to https://docs.langchain4j.dev/tutorials/rag/.
 
+The example above is a CDI bean that implements
+`Supplier<RetrievalAugmentor>`. An alternative way to wire things up is to
+create a CDI bean that directly implements `RetrievalAugmentor`, for example
+via a CDI producer, and letting Quarkus auto-discover it (by not specifying
+the `retrievalAugmentor` parameter of the `@RegisterAiService` annotation).
+
 The EmbeddingStoreContentRetriever necessitates a configured embedding store
 (Redis, Chroma, etc.) and an embedding model. Configure the maximum number
 of documents to retrieve (e.g., 20 in the example) and set the minimum
