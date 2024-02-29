@@ -175,6 +175,18 @@ public @interface RegisterAiService {
     }
 
     /**
+     * Marker that is used to tell Quarkus to not use any retrieval augmentor even if a CDI bean implementing
+     * the `RetrievalAugmentor` interface exists.
+     */
+    final class NoRetrievalAugmentorSupplier implements Supplier<RetrievalAugmentor> {
+
+        @Override
+        public RetrievalAugmentor get() {
+            throw new UnsupportedOperationException("should never be called");
+        }
+    }
+
+    /**
      * Marker that is used to tell Quarkus to use the {@link AuditService} that the user has configured as a CDI bean.
      * If no such bean exists, then no audit service will be used.
      */
