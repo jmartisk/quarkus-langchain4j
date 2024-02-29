@@ -5,21 +5,19 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import jakarta.inject.Inject;
 
-import org.acme.example.AiServiceWithNaiveRag;
+import org.acme.example.AiServiceWithAutoDiscoveredRetrievalAugmentor;
+import org.acme.example.AiServiceWithNoRetrievalAugmentor;
+import org.acme.example.AiServiceWithSpecifiedRetrievalAugmentor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
-import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
-import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import io.quarkus.test.junit.QuarkusMock;
 import io.quarkus.test.junit.QuarkusTest;
 
@@ -27,13 +25,13 @@ import io.quarkus.test.junit.QuarkusTest;
 public class NaiveRAGTest {
 
     @Inject
-    AiServiceWithNaiveRag service;
+    AiServiceWithSpecifiedRetrievalAugmentor serviceWithSpecifiedRetrievalAugmentor;
 
     @Inject
-    InMemoryEmbeddingStore<TextSegment> store;
+    AiServiceWithAutoDiscoveredRetrievalAugmentor serviceWithAutoDiscoveredRetrievalAugmentor;
 
     @Inject
-    EmbeddingModel embeddingModel;
+    AiServiceWithNoRetrievalAugmentor serviceWithNoRetrievalAugmentor;
 
     private static AtomicReference<List<ChatMessage>> lastQuery = new AtomicReference<>();
 
@@ -50,15 +48,25 @@ public class NaiveRAGTest {
     }
 
     @Test
-    public void test() {
-        embed("Charlie was born in 2018.");
-        embed("David was born in 2019.");
-        service.chat("When was Charlie born?");
+    public void testWithSpecifiedAugmentor() {
+        serviceWithSpecifiedRetrievalAugmentor.chat("When was Charlie born?");
         List<ChatMessage> query = lastQuery.get();
         Assertions.assertTrue(query.get(0).text().contains("Charlie was born in 2018."));
     }
 
-    private void embed(String text) {
-        store.add(embeddingModel.embed(text).content(), new TextSegment(text, new Metadata()));
+    @Test
+    public void testWithNoAugmentor() {
+        serviceWithNoRetrievalAugmentor.chat("When was Charlie born?");
+        List<ChatMessage> query = lastQuery.get();
+        // No RAG should be used, so nothing from the embedding store
+        Assertions.assertFalse(query.get(0).text().contains("Charlie was born in 2018."));
     }
+
+    @Test
+    public void testWithAutoDiscoveredAugmentor() {
+        serviceWithAutoDiscoveredRetrievalAugmentor.chat("When was Charlie born?");
+        List<ChatMessage> query = lastQuery.get();
+        Assertions.assertTrue(query.get(0).text().contains("Charlie was born in 2018."));
+    }
+
 }

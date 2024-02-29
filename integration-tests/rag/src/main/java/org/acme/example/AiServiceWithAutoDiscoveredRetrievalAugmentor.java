@@ -1,26 +1,25 @@
 package org.acme.example;
 
-import java.util.function.Supplier;
-
-import jakarta.enterprise.context.Dependent;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Produces;
 import jakarta.inject.Inject;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.rag.DefaultRetrievalAugmentor;
-import devw.langchain4j.rag.RetrievalAugmentor;
+import dev.langchain4j.rag.RetrievalAugmentor;
 import dev.langchain4j.rag.content.retriever.ContentRetriever;
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
 import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
 import io.quarkiverse.langchain4j.RegisterAiService;
 
-@RegisterAiService(retrievalAugmentor = AiServiceWithNaiveRag.NaiveRagAugmentor.class)
-public interface AiServiceWithNaiveRag {
+@RegisterAiService
+public interface AiServiceWithAutoDiscoveredRetrievalAugmentor {
 
     String chat(String message);
 
-    @Dependent
-    class NaiveRagAugmentor implements Supplier<RetrievalAugmentor> {
+    @ApplicationScoped
+    class AugmentorProducer {
 
         @Inject
         InMemoryEmbeddingStore<TextSegment> store;
@@ -28,7 +27,7 @@ public interface AiServiceWithNaiveRag {
         @Inject
         EmbeddingModel embeddingModel;
 
-        @Override
+        @Produces
         public RetrievalAugmentor get() {
             ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
                     .embeddingModel(embeddingModel)
