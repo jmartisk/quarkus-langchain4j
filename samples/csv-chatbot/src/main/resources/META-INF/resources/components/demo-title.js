@@ -54,7 +54,7 @@ export class DemoTitle extends LitElement {
                 This demo shows how to build a chatbot powered by GPT 3.5 and retrieval augmented generation.
                 The application ingested a CSV files listing the top 100 movies from IMDB.
                 You can now ask questions about the movies and the application will answer.
-                For example <em>What is the rating of the movie Inception?</em> or <em>What is the genre of the movie Inception?</em>
+                For example <em>What is the rating of the movie Inception?</em> or <em>What comedy movies are in the database?</em>
             </div>
             
             <div class="explanation">
@@ -64,7 +64,8 @@ export class DemoTitle extends LitElement {
             <div class="explanation">
                 <ol>
                     <li>The user send a question.</li>
-                    <li>The application looks for relevant data in the store.</li>
+                    <li>The application asks the LLM to create a SQL query that retrieves the relevant data from thd database.</li>
+                    <li>The application looks executes the SQL query.</li>
                     <li>The relevant data is retrieved and added to the user's question.</li>
                     <li>The extended question is sent to the LLM model.</li>
                     <li>The response is received and sent back to the user.</li>
