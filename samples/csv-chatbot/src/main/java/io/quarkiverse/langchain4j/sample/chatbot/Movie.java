@@ -23,14 +23,14 @@ public class Movie {
     @Column(name = "year_of_release")
     private int yearOfRelease;
 
-    @Column(name = "category")
-    private String category;
+    @Column(name = "mpaa_rating")
+    private String mpaaRating;
 
     @Column(name = "run_time")
     private int runTime;
 
-    @Column(name = "genre")
-    private String genre;
+    @Column(name = "genres")
+    private String genres;
 
     @Column(name = "imdb_rating")
     private float imdbRating;
@@ -73,12 +73,12 @@ public class Movie {
         this.yearOfRelease = yearOfRelease;
     }
 
-    public String getCategory() {
-        return category;
+    public String getMpaaRating() {
+        return mpaaRating;
     }
 
-    public void setCategory(String category) {
-        this.category = category;
+    public void setMpaaRating(String category) {
+        this.mpaaRating = category;
     }
 
     public int getRunTime() {
@@ -89,12 +89,12 @@ public class Movie {
         this.runTime = runTime;
     }
 
-    public String getGenre() {
-        return genre;
+    public String getGenres() {
+        return genres;
     }
 
-    public void setGenre(String genre) {
-        this.genre = genre;
+    public void setGenres(String genres) {
+        this.genres = genres;
     }
 
     public float getImdbRating() {

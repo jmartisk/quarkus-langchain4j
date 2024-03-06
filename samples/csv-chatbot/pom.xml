@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>quarkus-langchain4j-sample-csv-chatbot</artifactId>
-    <name>Quarkus LangChain4j - Sample - Chatbot &amp; RAG loading a CSV file</name>
+    <name>Quarkus LangChain4j - Sample - Chatbot &amp; RAG from a database using generated SQL queries</name>
 
     <dependencies>
         <dependency>
@@ -32,16 +32,6 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.langchain4j</groupId>
-            <artifactId>quarkus-langchain4j-openai</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.quarkiverse.langchain4j</groupId>
-            <artifactId>quarkus-langchain4j-openai-deployment</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -161,6 +151,47 @@
                     <url>https://repo.mvnpm.org/maven2</url>
                 </repository>
             </repositories>
+        </profile>
+
+        <profile>
+            <id>openai</id>
+            <activation>
+                <property>
+                    <name>!ollama</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkiverse.langchain4j</groupId>
+                    <artifactId>quarkus-langchain4j-openai</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkiverse.langchain4j</groupId>
+                    <artifactId>quarkus-langchain4j-openai-deployment</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+        <profile>
+            <id>ollama</id>
+            <activation>
+                <property>
+                    <name>ollama</name>
+                </property>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.quarkiverse.langchain4j</groupId>
+                    <artifactId>quarkus-langchain4j-ollama</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+                <dependency>
+                    <groupId>io.quarkiverse.langchain4j</groupId>
+                    <artifactId>quarkus-langchain4j-ollama-deployment</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 

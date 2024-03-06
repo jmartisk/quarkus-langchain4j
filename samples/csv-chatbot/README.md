@@ -13,4 +13,8 @@ LLM is used to generate SQL queries necessary for answering your question.
 Check the application's log, the SQL queries and the retrieved data will be
 printed there.
 
+# Switching to a local model (codellama) instead of OpenAI
 
+Install Ollama per instructions in https://docs.quarkiverse.io/quarkus-langchain4j/dev/ollama.html
+And run the `codellama` model (`ollama run codellama`).
+Then run the application with `mvn quarkus:dev -Dollama`

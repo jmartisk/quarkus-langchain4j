@@ -30,10 +30,8 @@ public class MovieDatabaseContentRetriever implements ContentRetriever {
     @Override
     public List<Content> retrieve(Query query) {
         String question = query.text();
-        String sqlQuery = support.createSqlQuery(question);
-        if (sqlQuery.contains("```sql")) { // strip the formatting if it's there
-            sqlQuery = sqlQuery.substring(sqlQuery.indexOf("```sql") + 6, sqlQuery.lastIndexOf("```"));
-        }
+        String messageWithsqlQuery = support.createSqlQuery(question);
+        String sqlQuery = extractSqlQuery(messageWithsqlQuery);
         Log.info("Question to answer: " + question);
         Log.info("Supporting SQL query: " + sqlQuery);
         List<Content> results = new ArrayList<>();
@@ -57,5 +55,25 @@ public class MovieDatabaseContentRetriever implements ContentRetriever {
             throw new RuntimeException(e);
         }
         return results;
+    }
+
+    // Try to extract the actual SQL query from the LLM's response when we asked it to create a SQL query
+    private String extractSqlQuery(String messageWithsqlQuery) {
+        Log.info("Raw response: " + messageWithsqlQuery);
+        // GPT usually returns just the query wrapped between ```sql and ```
+        if (messageWithsqlQuery.startsWith("```sql")) { // strip the formatting if it's there
+            return messageWithsqlQuery.substring(messageWithsqlQuery.indexOf("```sql") + 6,
+                    messageWithsqlQuery.lastIndexOf("```"));
+        }
+        // orca seems to usually add some text around the query even when you
+        // ask it to not do that, and the query is wrapped inside a ``` block
+        if (messageWithsqlQuery.contains("```")) {
+            return messageWithsqlQuery.substring(messageWithsqlQuery.indexOf("```") + 3,
+                    messageWithsqlQuery.lastIndexOf("```"));
+        }
+        // if the model didn't wrap the query in a code block, let's try to
+        // just assume that the response is only the query without additional formatting
+        // Codellama seems to do this
+        return messageWithsqlQuery;
     }
 }

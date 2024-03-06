@@ -45,9 +45,9 @@ public class CsvIngestorExample {
                 movie.setIndex(Integer.parseInt(record.get("index")));
                 movie.setMovieName(record.get("movie_name"));
                 movie.setYearOfRelease(Integer.parseInt(record.get("year_of_release")));
-                movie.setCategory(record.get("category"));
+                movie.setMpaaRating(record.get("mpaa_rating"));
                 movie.setRunTime(Integer.parseInt(record.get("run_time")));
-                movie.setGenre(record.get("genre"));
+                movie.setGenres(record.get("genres"));
                 movie.setImdbRating(Float.parseFloat(record.get("imdb_rating")));
                 movie.setVotes(
                         Integer.parseInt(record.get("votes").substring(1, record.get("votes").length() - 1).replace(",", "")));

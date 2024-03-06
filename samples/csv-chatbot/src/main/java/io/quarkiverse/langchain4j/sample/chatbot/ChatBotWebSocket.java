@@ -12,6 +12,7 @@ import jakarta.websocket.server.ServerEndpoint;
 import org.eclipse.microprofile.context.ManagedExecutor;
 
 import io.quarkiverse.langchain4j.ChatMemoryRemover;
+import io.quarkus.logging.Log;
 
 @ServerEndpoint("/chatbot")
 public class ChatBotWebSocket {
@@ -25,7 +26,7 @@ public class ChatBotWebSocket {
     @OnOpen
     public void onOpen(Session session) {
         managedExecutor.execute(() -> {
-            String response = bot.chat(session, "hello");
+            String response = bot.chat(session, "Introduce yourself.");
             try {
                 session.getBasicRemote().sendText(response);
             } catch (IOException e) {
@@ -42,6 +43,7 @@ public class ChatBotWebSocket {
     @OnMessage
     public void onMessage(String message, Session session) {
         managedExecutor.execute(() -> {
+            Log.info("Message from user: " + message + ", obtaining answer now...");
             String response = bot.chat(session, message);
             try {
                 session.getBasicRemote().sendText(response);

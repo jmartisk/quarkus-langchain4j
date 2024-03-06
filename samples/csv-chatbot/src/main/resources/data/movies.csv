@@ -1,4 +1,4 @@
-index,movie_name,year_of_release,category,run_time,genre,imdb_rating,votes,gross_total
+index,movie_name,year_of_release,category,run_time,genres,imdb_rating,votes,gross_total
 1,The Godfather,1972,R,175,"Crime, Drama",9.2,"1,860,471",134.97
 2,The Silence of the Lambs,1991,R,118,"Crime, Drama, Thriller",8.6,"1,435,344",130.74
 3,Star Wars: Episode V - The Empire Strikes Back,1980,PG,124,"Action, Adventure, Fantasy",8.7,"1,294,805",290.48

@@ -16,6 +16,7 @@ public interface MovieMuseSupport {
             The database contains information about top rated movies from IMDB.
             The dialect is PostgreSQL and the relevant table is called 'movie'.
             Always include `movie_name` in the SELECT clause.
+            You must not add any placeholders into the query, all data must be hardcoded in it.
 
             The user might have not provided the movie name exactly, in that case
             try to correct it to the official movie name, or match it using a LIKE clause.
@@ -25,15 +26,21 @@ public interface MovieMuseSupport {
             - index (integer)
             - movie_name (string)
             - year_of_release (integer)
-            - category (string)
+            - mpaa_rating (string) - this is the MPAA rating (G, PG, PG-13, R,...)
             - run_time (integer, in minutes)
-            - genre (string) - this is a comma-separated list of genres
+            - genres (string) - this is a comma-separated list of genres. Used genres are Comedy, Crime, Drama,
+                Thriller, Action, Adventure, Fantasy, Sci-Fi, Mystery, Horror, Animation, Biography, History, War, Music, Musical, Western.
             - imdb_rating (float)
             - votes (integer)
             - gross_total (integer, in millions of US dollars)
 
-            Answer only with the query and nothing else.
+            Answer only with the raw SQL query and nothing else, don't add any text around it!
             """)
-    String createSqlQuery(@UserMessage String question);
+    @UserMessage("""
+            The user's question is:
+
+            {question}
+            """)
+    String createSqlQuery(String question);
 
 }

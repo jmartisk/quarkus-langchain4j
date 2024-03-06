@@ -36,6 +36,15 @@ public class MovieMuseRetrievalAugmentor implements Supplier<RetrievalAugmentor>
                 // to generate a SQL query from it, then executes the query and
                 // provides the resulting data back to the LLM, so it can
                 // generate a proper text response from it.
+                //                .queryRouter(query -> {
+                //                    if (query.text().equals("hello")) {
+                //                        // Don't use the content retriever for the initial "hello" greeting
+                //                        // that is sent automatically to make the bot introduce itself
+                //                        return Collections.emptyList();
+                //                    } else {
+                //                        return Collections.singletonList(contentRetriever);
+                //                    }
+                //                })
                 .contentRetriever(contentRetriever)
                 .build();
     }
