@@ -16,6 +16,7 @@
     <module>cohere</module>
     <module>core</module>
     <module>docs</module>
+    <module>elasticsearch</module>
     <module>hugging-face</module>
     <module>bam</module>
     <module>watsonx</module>
