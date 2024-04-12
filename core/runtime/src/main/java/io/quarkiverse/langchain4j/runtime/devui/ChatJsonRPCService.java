@@ -118,7 +118,8 @@ public class ChatJsonRPCService {
         return "OK";
     }
 
-    public ChatResultPojo chat(String message, boolean ragEnabled) {
+    public ChatResultPojo chat(ChatMessagePojo messagePojo, boolean ragEnabled) {
+        UserMessage userMessage = messagePojo.toUserMessage();
         ChatMemory memory = currentMemory.get();
         if (memory == null) {
             reset("");
@@ -130,12 +131,12 @@ public class ChatJsonRPCService {
         // removing single messages
         List<ChatMessage> chatMemoryBackup = memory.messages();
         try {
-            if (retrievalAugmentor != null && ragEnabled) {
-                UserMessage userMessage = UserMessage.from(message);
+            if (retrievalAugmentor != null && ragEnabled
+                    && userMessage.hasSingleText()) { // RAG seems to work only on single-text messages now
                 Metadata metadata = Metadata.from(userMessage, currentMemoryId.get(), memory.messages());
                 memory.add(retrievalAugmentor.augment(userMessage, metadata));
             } else {
-                memory.add(new UserMessage(message));
+                memory.add(userMessage);
             }
 
             Response<AiMessage> modelResponse;
