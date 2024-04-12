@@ -8,6 +8,7 @@ import '@vaadin/message-input';
 import '@vaadin/message-list';
 import '@vaadin/progress-bar';
 import '@vaadin/text-field';
+import '@vaadin/upload';
 import '@vaadin/icon';
 import '@vaadin/icons';
 import { JsonRpc } from 'jsonrpc';
@@ -15,6 +16,14 @@ import { JsonRpc } from 'jsonrpc';
 export class QwcChat extends LitElement {
 
     jsonRpc = new JsonRpc(this);
+
+    // TODOs:
+    // after submitting a message with images, remove the images from the upload component
+    // show progress bar
+    // make sure it's possible to submit just an image, with an empty message
+    // add some more context info to the UI, and the upload component less intrusive
+    // resolve the 100 kB message size limit
+    // show the image immediately after clicking Send
 
     static styles = css`
         :host {
@@ -98,6 +107,8 @@ export class QwcChat extends LitElement {
             ${this._renderSystemPane()}
             <vaadin-message-list .items="${this._chatItems}"></vaadin-message-list>
             <vaadin-progress-bar class="${this._progressBarClass}" indeterminate></vaadin-progress-bar>
+            <label for="upload-image">Upload image</label>
+            <vaadin-upload .maxFiles="1" id="upload-image" .nodrop="${false}"></vaadin-upload>
             <vaadin-message-input @submit="${this._handleSendChat}"></vaadin-message-input>
         `;
     }
@@ -152,17 +163,35 @@ export class QwcChat extends LitElement {
 
     _handleSendChat(e) {
         let message = e.detail.value;
-        if(message && message.trim().length>0){
-            this._cementSystemMessage();
-            this._addUserMessage(message);
-            this._showProgressBar();
-
-            this.jsonRpc.chat({message: message, ragEnabled: this._ragEnabled}).then(jsonRpcResponse => {
-                this._showResponse(jsonRpcResponse);
-            }).catch((error) => {
-                this._showError(error);
-                this._hideProgressBar();
-            });
+        let image = this.shadowRoot.getElementById('upload-image').files[0];
+        var imageData = null;
+        let obj = this; // backup "this" to be able to use it inside a lambda expression
+        if(image && !image.abort) {
+            // chat message contains an image
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                imageData = reader.result.split(',')[1]; // remove the data:image/png;base64, prefix
+                obj.jsonRpc.chat({messagePojo: {imageBase64: imageData, message: message}, ragEnabled: obj._ragEnabled}).then(jsonRpcResponse => {
+                    obj._showResponse(jsonRpcResponse);
+                }).catch((error) => {
+                    obj._showError(error);
+                    obj._hideProgressBar();
+                });
+            };
+            reader.readAsDataURL(image);
+        } else {
+            // message without an image
+            if (message && message.trim().length > 0) {
+                this._cementSystemMessage();
+                this._addUserMessage(message);
+                this._showProgressBar();
+                this.jsonRpc.chat({messagePojo: {message: message}, ragEnabled: this._ragEnabled}).then(jsonRpcResponse => {
+                    this._showResponse(jsonRpcResponse);
+                }).catch((error) => {
+                    this._showError(error);
+                    this._hideProgressBar();
+                });
+            }
         }
 
       }
@@ -208,7 +237,7 @@ arguments = ${toolExecutionRequest.arguments}\n`;
                     this._addToolMessage(toolMessage);
                 }
             } else if(item.type === "USER") {
-                this._addUserMessage(item.message);
+                this._addUserMessage(item.message, item.imageBase64);
             } else if(item.type === "SYSTEM") {
                 this._addSystemMessage(item.message);
             } else if (item.type === "TOOL_EXECUTION_RESULT"){
@@ -248,8 +277,18 @@ status = ${item.toolExecutionResult.text}`);
         this._addMessage(message, "AI", 3);
     }
 
-    _addUserMessage(message){
-        this._addMessage(message, "Me", 1);
+    _addUserMessage(message, imageBase64){
+        var imageSnippet = html``;
+        var messageSnippet = html``;
+        if(imageBase64) {
+            imageSnippet = html`<img src="data:image/png;base64,${imageBase64}" 
+                                     alt="User image" style="max-width: 100%; max-height: 100%;">`;
+        }
+        if(message) {
+            // append the message to the image
+            messageSnippet = message;
+        }
+        this._addMessage(html`${imageSnippet} ${messageSnippet}`, "Me", 1);
     }
 
     _addStyledMessage(message, user, colorIndex, className){
