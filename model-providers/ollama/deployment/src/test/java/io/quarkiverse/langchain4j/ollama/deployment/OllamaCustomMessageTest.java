@@ -20,7 +20,7 @@ import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.CustomMessage;
 import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import io.quarkiverse.langchain4j.testing.internal.WiremockAware;
@@ -38,7 +38,7 @@ public class OllamaCustomMessageTest extends WiremockAware {
             .overrideRuntimeConfigKey("quarkus.langchain4j.ollama.log-responses", "true");
 
     @Inject
-    ChatLanguageModel chatLanguageModel;
+    ChatModel chatLanguageModel;
 
     @Test
     void extract() {

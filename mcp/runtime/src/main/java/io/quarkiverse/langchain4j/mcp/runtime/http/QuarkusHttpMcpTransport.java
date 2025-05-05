@@ -39,6 +39,8 @@ public class QuarkusHttpMcpTransport implements McpTransport {
     private volatile McpPostEndpoint postEndpoint;
     private volatile McpOperationHandler operationHandler;
 
+    private volatile Runnable onFailure;
+
     public QuarkusHttpMcpTransport(QuarkusHttpMcpTransport.Builder builder) {
         sseUrl = ensureNotNull(builder.sseUrl, "Missing SSE endpoint URL");
         timeout = getOrDefault(builder.timeout, Duration.ofSeconds(60));
@@ -90,6 +92,11 @@ public class QuarkusHttpMcpTransport implements McpTransport {
     }
 
     @Override
+    public void onFailure(Runnable actionOnFailure) {
+        this.onFailure = actionOnFailure;
+    }
+
+    @Override
     public CompletableFuture<JsonNode> executeOperationWithResponse(McpClientMessage operation) {
         return execute(operation, operation.getId()).subscribeAsCompletionStage();
     }
@@ -130,6 +137,7 @@ public class QuarkusHttpMcpTransport implements McpTransport {
         CompletableFuture<String> initializationFinished = new CompletableFuture<>();
         SseSubscriber listener = new SseSubscriber(operationHandler, logResponses, initializationFinished);
         sseEndpoint.get().subscribe().with(listener, throwable -> {
+            onFailure.run();
             if (!initializationFinished.isDone()) {
                 log.warn("Failed to connect to the SSE channel, the MCP client will not be used", throwable);
                 initializationFinished.completeExceptionally(throwable);

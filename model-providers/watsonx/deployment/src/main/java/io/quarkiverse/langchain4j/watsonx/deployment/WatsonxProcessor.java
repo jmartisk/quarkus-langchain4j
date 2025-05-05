@@ -20,8 +20,8 @@ import org.jboss.jandex.DotName;
 import org.jboss.jandex.ParameterizedType;
 import org.jboss.jandex.Type;
 
-import dev.langchain4j.model.chat.ChatLanguageModel;
-import dev.langchain4j.model.chat.StreamingChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import io.quarkiverse.langchain4j.ModelName;
 import io.quarkiverse.langchain4j.deployment.DotNames;
 import io.quarkiverse.langchain4j.deployment.LangChain4jDotNames;
@@ -195,8 +195,8 @@ public class WatsonxProcessor {
                     ? fixedRuntimeConfig.defaultConfig().mode()
                     : fixedRuntimeConfig.namedConfig().get(configName).mode();
 
-            Function<SyntheticCreationalContext<ChatLanguageModel>, ChatLanguageModel> chatLanguageModel;
-            Function<SyntheticCreationalContext<StreamingChatLanguageModel>, StreamingChatLanguageModel> streamingChatLanguageModel;
+            Function<SyntheticCreationalContext<ChatModel>, ChatModel> chatLanguageModel;
+            Function<SyntheticCreationalContext<StreamingChatModel>, StreamingChatModel> streamingChatLanguageModel;
 
             if (mode.equalsIgnoreCase("chat")) {
                 chatLanguageModel = recorder.chatModel(runtimeConfig, configName);
