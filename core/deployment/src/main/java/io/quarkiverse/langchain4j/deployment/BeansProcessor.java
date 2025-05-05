@@ -119,7 +119,7 @@ public class BeansProcessor {
         final String dot = ".";
 
         // bean types for models
-        final String chatModelBeanType = "ChatLanguageModel or StreamingChatLanguageModel";
+        final String chatModelBeanType = "ChatModel or StreamingChatModel";
         final String embeddingModelBeanType = "EmbeddingModel";
         final String scoringModelBeanType = "ScoringModel";
         final String moderationModelBeanType = "ModerationModel";

@@ -18,7 +18,7 @@ public class ChatLanguageModelResource {
     private final ChatModel chatModel;
     private final StreamingChatModel streamingChatModel;
 
-    public ChatLanguageModelResource(ChatLanguageModel chatModel, StreamingChatModel streamingChatModel) {
+    public ChatLanguageModelResource(ChatModel chatModel, StreamingChatModel streamingChatModel) {
         this.chatModel = chatModel;
         this.streamingChatModel = streamingChatModel;
     }

@@ -195,15 +195,15 @@ public class WatsonxProcessor {
                     ? fixedRuntimeConfig.defaultConfig().mode()
                     : fixedRuntimeConfig.namedConfig().get(configName).mode();
 
-            Function<SyntheticCreationalContext<ChatModel>, ChatModel> chatLanguageModel;
-            Function<SyntheticCreationalContext<StreamingChatModel>, StreamingChatModel> streamingChatLanguageModel;
+            Function<SyntheticCreationalContext<ChatModel>, ChatModel> chatModel;
+            Function<SyntheticCreationalContext<StreamingChatModel>, StreamingChatModel> streamingChatModel;
 
             if (mode.equalsIgnoreCase("chat")) {
-                chatLanguageModel = recorder.chatModel(runtimeConfig, configName);
-                streamingChatLanguageModel = recorder.streamingChatModel(runtimeConfig, configName);
+                chatModel = recorder.chatModel(runtimeConfig, configName);
+                streamingChatModel = recorder.streamingChatModel(runtimeConfig, configName);
             } else if (mode.equalsIgnoreCase("generation")) {
-                chatLanguageModel = recorder.generationModel(runtimeConfig, configName);
-                streamingChatLanguageModel = recorder.generationStreamingModel(runtimeConfig, configName);
+                chatModel = recorder.generationModel(runtimeConfig, configName);
+                streamingChatModel = recorder.generationStreamingModel(runtimeConfig, configName);
             } else {
                 throw new RuntimeException(
                         "The \"mode\" value for the model \"%s\" is not valid. Choose one between [\"chat\", \"generation\"]"
@@ -217,7 +217,7 @@ public class WatsonxProcessor {
                     .scope(ApplicationScoped.class)
                     .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
                             new Type[] { ClassType.create(DotNames.CHAT_MODEL_LISTENER) }, null))
-                    .createWith(chatLanguageModel);
+                    .createWith(chatModel);
 
             addQualifierIfNecessary(chatBuilder, configName);
             beanProducer.produce(chatBuilder.done());
@@ -229,7 +229,7 @@ public class WatsonxProcessor {
                     .scope(ApplicationScoped.class)
                     .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
                             new Type[] { ClassType.create(DotNames.CHAT_MODEL_LISTENER) }, null))
-                    .createWith(streamingChatLanguageModel);
+                    .createWith(streamingChatModel);
 
             addQualifierIfNecessary(streamingBuilder, configName);
             beanProducer.produce(streamingBuilder.done());
