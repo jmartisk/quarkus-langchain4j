@@ -1,10 +1,12 @@
 package io.quarkiverse.langchain4j.easyrag.runtime;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.PathMatcher;
+import java.util.Collections;
 import java.util.List;
 
 import org.jboss.logging.Logger;
@@ -69,6 +71,12 @@ public class EasyRagIngestor {
     private List<Document> getDocuments(EasyRagConfig config) {
         PathMatcher pathMatcher = FileSystems.getDefault().getPathMatcher(config.pathMatcher());
         boolean recursive = config.recursive();
+        if (config.pathType().equals(EasyRagConfig.PathType.CLASSPATH)) {
+            try {
+                FileSystems.newFileSystem(URI.create("resource:/"), Collections.singletonMap("create", "true"));
+            } catch (IOException e) {
+            }
+        }
 
         return switch (config.pathType()) {
             case CLASSPATH -> recursive
