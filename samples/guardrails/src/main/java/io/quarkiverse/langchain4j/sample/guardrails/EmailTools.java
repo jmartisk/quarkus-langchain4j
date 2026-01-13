@@ -21,7 +21,8 @@ public class EmailTools {
     @Tool("Send an email to a recipient")
     @ToolInputGuardrails({
             EmailFormatValidator.class,
-            UserAuthorizationGuardrail.class
+            UserApprovalGuardrail.class
+//            UserAuthorizationGuardrail.class
     })
     public String sendEmail(String to,
                             String subject,
