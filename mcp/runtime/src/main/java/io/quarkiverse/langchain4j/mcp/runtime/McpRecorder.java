@@ -29,6 +29,7 @@ import io.quarkiverse.langchain4j.jaxrsclient.JaxRsHttpClientBuilder;
 import io.quarkiverse.langchain4j.mcp.runtime.config.*;
 import io.quarkiverse.langchain4j.mcp.runtime.http.QuarkusHttpMcpTransport;
 import io.quarkiverse.langchain4j.mcp.runtime.http.QuarkusStreamableHttpMcpTransport;
+import io.quarkiverse.langchain4j.runtime.tool.guardrails.ToolGuardrailService;
 import io.quarkus.arc.Arc;
 import io.quarkus.arc.SyntheticCreationalContext;
 import io.quarkus.runtime.RuntimeValue;
@@ -45,6 +46,9 @@ import io.vertx.core.http.HttpClientOptions;
 public class McpRecorder {
 
     private static final TypeLiteral<Instance<Tracer>> TRACER_TYPE_LITERAL = new TypeLiteral<>() {
+    };
+
+    private static final TypeLiteral<Instance<ToolGuardrailService>> GUARDRAIL_SERVICE_LITERAL = new TypeLiteral<>() {
     };
 
     public static Map<String, LocalLaunchParams> claudeConfigContents = Collections.emptyMap();
@@ -159,7 +163,9 @@ public class McpRecorder {
                     clients.add(context.getInjectedReference(McpClient.class, qualifier));
                 }
                 boolean exposeResourcesAsTools = mcpRuntimeConfiguration.getValue().exposeResourcesAsTools().orElse(false);
-                return new QuarkusMcpToolProvider(clients, context.getInjectedReference(TRACER_TYPE_LITERAL),
+                return new QuarkusMcpToolProvider(clients,
+                        context.getInjectedReference(TRACER_TYPE_LITERAL),
+                        context.getInjectedReference(GUARDRAIL_SERVICE_LITERAL),
                         exposeResourcesAsTools);
             }
         };

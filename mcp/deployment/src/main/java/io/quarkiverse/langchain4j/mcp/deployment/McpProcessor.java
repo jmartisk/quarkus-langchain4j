@@ -38,6 +38,7 @@ import io.quarkiverse.langchain4j.mcp.runtime.McpRegistryClientName;
 import io.quarkiverse.langchain4j.mcp.runtime.config.LocalLaunchParams;
 import io.quarkiverse.langchain4j.mcp.runtime.config.McpBuildTimeConfiguration;
 import io.quarkiverse.langchain4j.mcp.runtime.config.McpTransportType;
+import io.quarkiverse.langchain4j.runtime.tool.guardrails.ToolGuardrailService;
 import io.quarkus.arc.deployment.SyntheticBeanBuildItem;
 import io.quarkus.arc.deployment.UnremovableBeanBuildItem;
 import io.quarkus.deployment.Capabilities;
@@ -63,6 +64,7 @@ public class McpProcessor {
     private static final DotName MCP_CLIENT_NAME = DotName.createSimple(McpClientName.class);
     private static final DotName MCP_REGISTRY_CLIENT_NAME = DotName.createSimple(McpRegistryClientName.class);
     private static final DotName TRACER = DotName.createSimple(Tracer.class);
+    private static final DotName TOOL_GUARDRAIL_SERVICE = DotName.createSimple(ToolGuardrailService.class);
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @BuildStep
@@ -168,6 +170,8 @@ public class McpProcessor {
                         .scope(ApplicationScoped.class)
                         .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
                                 new Type[] { ClassType.create(TRACER) }, null))
+                        .addInjectionPoint(ParameterizedType.create(DotNames.CDI_INSTANCE,
+                                new Type[] { ClassType.create(TOOL_GUARDRAIL_SERVICE) }, null))
                         .createWith(recorder.toolProviderFunction(clients.keySet()));
                 for (AnnotationInstance qualifier : qualifiers) {
                     configurator.addInjectionPoint(ClassType.create(MCP_CLIENT), qualifier);
